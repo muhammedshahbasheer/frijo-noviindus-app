@@ -16,7 +16,7 @@ class AuthController extends ChangeNotifier {
       );
 
       final token = response["token"]["refresh"];
-     
+     print(token);
       if (token != null) {
         final prefs = await SharedPreferences.getInstance(); 
         await prefs.setString("token", token);
