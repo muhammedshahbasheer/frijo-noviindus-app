@@ -36,7 +36,8 @@ class ApiClient {
   }
   static dynamic _processResponse(http.Response response) {
     final jsonResponse = jsonDecode(response.body);
-    if (response.statusCode == 200) {
+    print(response.statusCode);
+    if (response.statusCode >= 200) {
       return jsonResponse;
     } else {
       throw Exception(jsonResponse["message"] ?? "Something went wrong");
