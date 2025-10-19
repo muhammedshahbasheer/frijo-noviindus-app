@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:frijo_noviindus_app/features/feed/presentation/add_feed.dart';
+import 'package:frijo_noviindus_app/features/feed/presentation/feed_controller.dart';
 import 'package:frijo_noviindus_app/features/home/model/feedmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -42,9 +44,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        child: Icon(Icons.add),backgroundColor: Colors.red,
+  backgroundColor: Colors.redAccent,
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChangeNotifierProvider(
+          create: (_) => FeedController(),
+          child: const AddFeedScreen(),
+        ),
       ),
+    );
+  },
+  child: const Icon(Icons.add),
+),
+
       backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         elevation: 0,
