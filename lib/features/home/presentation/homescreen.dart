@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:frijo_noviindus_app/features/feed/presentation/add_feed.dart';
-import 'package:frijo_noviindus_app/features/feed/presentation/feed_controller.dart';
-import 'package:frijo_noviindus_app/features/home/model/feedmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
+import 'package:frijo_noviindus_app/features/feed/presentation/add_feed.dart';
+import 'package:frijo_noviindus_app/features/feed/presentation/feed_controller.dart';
+import 'package:frijo_noviindus_app/features/feed/presentation/my_feed.dart';
 import 'home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,28 +15,66 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  int? _currentlyPlayingIndex;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final controller = Provider.of<HomeController>(context, listen: false);
-      controller.fetchCategories();
       controller.fetchFeeds();
     });
   }
 
   @override
   void dispose() {
-    Provider.of<HomeController>(context, listen: false).disposeController();
+    _disposePlayer();
     super.dispose();
   }
 
-  // ✅ Helper to get profile image or fallback
-  ImageProvider<Object>? getProfileImage(String? url) {
-    if (url != null && url.isNotEmpty) {
-      return NetworkImage(url);
+  void _disposePlayer() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    _chewieController = null;
+    _videoController = null;
+    _currentlyPlayingIndex = null;
+  }
+
+  Future<void> _playVideo(String url, int index) async {
+    // Stop any currently playing video
+    if (_currentlyPlayingIndex != index) {
+      _disposePlayer();
+
+      final controller = VideoPlayerController.network(url);
+      await controller.initialize();
+
+      final chewie = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: true,
+        looping: false,
+        allowFullScreen: true,
+        aspectRatio: controller.value.aspectRatio,
+        allowMuting: true,
+        showControls: true,
+        showOptions: false,
+      );
+
+      setState(() {
+        _videoController = controller;
+        _chewieController = chewie;
+        _currentlyPlayingIndex = index;
+      });
+    } else {
+      // If same video tapped, toggle play/pause
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
+      } else {
+        _videoController!.play();
+      }
+      setState(() {});
     }
-    return null; // Will show default icon instead
   }
 
   @override
@@ -43,220 +82,139 @@ class _HomeScreenState extends State<HomeScreen> {
     final controller = Provider.of<HomeController>(context);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-  backgroundColor: Colors.redAccent,
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChangeNotifierProvider(
-          create: (_) => FeedController(),
-          child: const AddFeedScreen(),
-        ),
-      ),
-    );
-  },
-  child: const Icon(Icons.add),
-),
-
       backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
-        elevation: 0,
         backgroundColor: const Color(0xFF0F0F0F),
-        title: Row(
-          children: [
-            Container(
-              height: 35,
-              width: 35,
-              decoration: BoxDecoration(
-                color: Colors.grey[800],
-                borderRadius: BorderRadius.circular(8),
-              ),
+        title: const Text('Feeds', style: TextStyle(color: Colors.white)),
+        actions: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider(
+                    create: (_) => FeedController(),
+                    child: const MyFeedScreen(),
+                  ),
+                ),
+              );
+            },
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.grey[800],
               child: const Icon(Icons.person, color: Colors.white, size: 20),
             ),
-
-            const SizedBox(width: 10),
-
-            // Greeting texts
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Text(
-                    'Hello Maria',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis, // prevents overflow
-                  ),
-                  Text(
-                    'Welcome back to Section',
-                    style: TextStyle(fontSize: 12, color: Colors.white),
-                    overflow: TextOverflow.ellipsis, // prevents overflow
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          // AppBar right profile icon
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.grey[800],
-            child: const Icon(Icons.person, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 10),
         ],
       ),
-
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.redAccent,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider(
+                create: (_) => FeedController(),
+                child: const AddFeedScreen(),
+              ),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
       body: controller.isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
           : RefreshIndicator(
-              onRefresh: () async {
-                await controller.fetchFeeds();
-              },
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  // 🔹 Category Chips
-                  SizedBox(
-                    height: 45,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      scrollDirection: Axis.horizontal,
-                      itemCount: controller.categories.length,
-                      itemBuilder: (context, index) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[900],
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Center(
-                            child: Text(
-                              controller.categories[index],
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        );
-                      },
+              onRefresh: () async => controller.fetchFeeds(),
+              child: ListView.builder(
+                itemCount: controller.feeds.length,
+                itemBuilder: (context, index) {
+                  final feed = controller.feeds[index];
+                  final isPlaying = _currentlyPlayingIndex == index;
+
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900],
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // 🔹 Feed Cards
-                  ...controller.feeds.map((feed) {
-                    bool isPlaying =
-                        controller.activeController != null &&
-                        controller.activeController!.dataSource == feed.video;
-
-                    return Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[900],
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // User Info
-                          ListTile(
-                            leading: CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Colors.grey[800],
-                              backgroundImage: getProfileImage(feed.userImage),
-                              child:
-                                  feed.userImage == null ||
-                                      feed.userImage!.isEmpty
-                                  ? const Icon(
-                                      Icons.person,
-                                      color: Colors.white,
-                                      size: 20,
-                                    )
-                                  : null,
-                            ),
-                            title: Text(
-                              feed.username,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: const Text(
-                              "5 days ago",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // User Info
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.grey[800],
+                            backgroundImage: (feed.userImage != null &&
+                                    feed.userImage!.isNotEmpty)
+                                ? NetworkImage(feed.userImage!)
+                                : null,
+                            child: (feed.userImage == null ||
+                                    feed.userImage!.isEmpty)
+                                ? const Icon(Icons.person, color: Colors.white)
+                                : null,
                           ),
+                          title: Text(
+                            feed.username,
+                            style: const TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: const Text(
+                            "5 days ago",
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ),
 
-                          // Video / Thumbnail
-                          GestureDetector(
-                            onTap: () => controller.playVideo(feed),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: isPlaying
-                                      ? AspectRatio(
-                                          aspectRatio: controller
-                                              .activeController!
-                                              .value
-                                              .aspectRatio,
-                                          child: VideoPlayer(
-                                            controller.activeController!,
-                                          ),
-                                        )
-                                      : Image.network(
+                        // Thumbnail / Video Player
+                        GestureDetector(
+                          onTap: () => _playVideo(feed.video, index),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: AspectRatio(
+                              aspectRatio: isPlaying && _videoController != null
+                                  ? _videoController!.value.aspectRatio
+                                  : 16 / 9,
+                              child: isPlaying && _chewieController != null
+                                  ? Chewie(controller: _chewieController!)
+                                  : Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.network(
                                           feed.image,
-                                          height: 240,
-                                          width: double.infinity,
                                           fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            color: Colors.grey[800],
+                                            child: const Center(
+                                              child: Icon(Icons.broken_image,
+                                                  color: Colors.white54),
+                                            ),
+                                          ),
                                         ),
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black45,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    size: 45,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
+                                        const Center(
+                                          child: Icon(Icons.play_circle_fill,
+                                              size: 60, color: Colors.white70),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
+                        ),
 
-                          // Description
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Text(
-                              feed.description,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                        // Description
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text(
+                            feed.description,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
     );
