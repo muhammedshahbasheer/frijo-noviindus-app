@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
-import 'feed_controller.dart'; 
+import 'package:chewie/chewie.dart';
+import 'feed_controller.dart';
 
 class MyFeedScreen extends StatefulWidget {
   const MyFeedScreen({super.key});
@@ -11,8 +12,9 @@ class MyFeedScreen extends StatefulWidget {
 }
 
 class _MyFeedScreenState extends State<MyFeedScreen> {
-  VideoPlayerController? _activeController;
-  String? _activeVideoUrl;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  int? _currentPlayingIndex;
 
   @override
   void initState() {
@@ -23,33 +25,51 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
 
   @override
   void dispose() {
-    _activeController?.dispose();
+    _disposePlayer();
     super.dispose();
   }
 
-  Future<void> _playVideo(String videoUrl) async {
-    if (_activeVideoUrl == videoUrl) {
-      // Toggle play/pause
-      if (_activeController!.value.isPlaying) {
-        _activeController!.pause();
+  void _disposePlayer() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    _chewieController = null;
+    _videoController = null;
+    _currentPlayingIndex = null;
+  }
+
+  Future<void> _playVideo(String videoUrl, int index) async {
+    // Stop any currently playing video
+    if (_currentPlayingIndex != index) {
+      _disposePlayer();
+
+      final controller = VideoPlayerController.network(videoUrl);
+      await controller.initialize();
+
+      final chewie = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: true,
+        looping: false,
+        allowFullScreen: true,
+        aspectRatio: controller.value.aspectRatio,
+        allowMuting: true,
+        showControls: true,
+        showOptions: false,
+      );
+
+      setState(() {
+        _videoController = controller;
+        _chewieController = chewie;
+        _currentPlayingIndex = index;
+      });
+    } else {
+      // Toggle play/pause for the same video
+      if (_videoController!.value.isPlaying) {
+        _videoController!.pause();
       } else {
-        _activeController!.play();
+        _videoController!.play();
       }
       setState(() {});
-      return;
     }
-
-    // Dispose previous controller
-    _activeController?.dispose();
-
-    final controller = VideoPlayerController.network(videoUrl);
-    await controller.initialize();
-    controller.play();
-
-    setState(() {
-      _activeController = controller;
-      _activeVideoUrl = videoUrl;
-    });
   }
 
   @override
@@ -81,10 +101,9 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
                     final imageUrl = feed["image"];
                     final videoUrl = feed["video"];
                     final desc = feed["description"] ?? "No description";
+                    final createdAt = feed["created_at"] ?? '';
 
-                    final isPlaying = _activeVideoUrl == videoUrl &&
-                        _activeController != null &&
-                        _activeController!.value.isPlaying;
+                    final isPlaying = _currentPlayingIndex == index;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -96,84 +115,67 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           GestureDetector(
-                            onTap: () => _playVideo(videoUrl),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: _activeVideoUrl == videoUrl &&
-                                          _activeController != null &&
-                                          _activeController!
-                                              .value.isInitialized
-                                      ? AspectRatio(
-                                          aspectRatio: _activeController!
-                                              .value.aspectRatio,
-                                          child:
-                                              VideoPlayer(_activeController!),
-                                        )
-                                      : Image.network(
-                                          imageUrl ?? '',
-                                          height: 220,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
-                                              Container(
-                                            height: 220,
-                                            color: Colors.grey[800],
-                                            child: const Center(
-                                              child: Icon(
-                                                Icons.image_not_supported,
-                                                color: Colors.white54,
+                            onTap: () => _playVideo(videoUrl, index),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: AspectRatio(
+                                aspectRatio: isPlaying && _videoController != null
+                                    ? _videoController!.value.aspectRatio
+                                    : 16 / 9,
+                                child: isPlaying && _chewieController != null
+                                    ? Chewie(controller: _chewieController!)
+                                    : Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          Image.network(
+                                            imageUrl ?? '',
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Container(
+                                              color: Colors.grey[800],
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.image_not_supported,
+                                                  color: Colors.white54,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    size: 50,
+                                          const Center(
+                                            child: Icon(
+                                              Icons.play_circle_fill,
+                                              size: 60,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  desc,
+                                  style: const TextStyle(
                                     color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  createdAt.toString().substring(0, 10),
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-
-                          // Description
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Text(
-                              desc,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-
-                          // Created Date
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 12.0),
-                            child: Text(
-                              feed["created_at"]
-                                  ?.toString()
-                                  .substring(0, 10) ?? '',
-                              style: const TextStyle(
-                                color: Colors.white38,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
                         ],
                       ),
                     );
