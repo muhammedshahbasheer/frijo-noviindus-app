@@ -66,46 +66,67 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(height: 80),
             Center(
-              child: ElevatedButton(
-                onPressed: context.read<AuthController>().isLoading
-                    ? null
-                    : () async {
-                        final phone = phonecontroller.text.trim();
-                        if (phone.isEmpty || phone.length < 9) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("please enter a valid number"),
-                            ),
-                          );
-                          return;
-                        }
-                        final success = await context.read<AuthController>().login(
-                          countrycode: Selectedcode,
-                          phone: phone,
-                        );
-                        if (success && context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => HomeScreen()),
-                          );
-                        }
-                      },
-                style: ElevatedButton.styleFrom(minimumSize: const Size(120, 50),backgroundColor: Colors.transparent),
-                child: Consumer<AuthController>(
-                  builder: (context, auth, _) {
-                    return auth.isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text("Login",style: TextStyle(color: Colors.white),);
-                  },
-                ),
+              child: ElevatedButton.icon(
+  onPressed: context.read<AuthController>().isLoading
+      ? null
+      : () async {
+          final phone = phonecontroller.text.trim();
+          if (phone.isEmpty || phone.length < 9) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Please enter a valid number"),
               ),
+            );
+            return;
+          }
+
+          final success = await context.read<AuthController>().login(
+                countrycode: Selectedcode,
+                phone: phone,
+              );
+
+          if (success && context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        },
+  icon: const Icon(
+    Icons.login_rounded, // 🔹 Add your icon here
+    color: Colors.white,
+  ),
+  label: Consumer<AuthController>(
+    builder: (context, auth, _) {
+      return auth.isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : const Text(
+              "Login",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            );
+    },
+  ),
+  style: ElevatedButton.styleFrom(
+    minimumSize: const Size(160, 50),
+    backgroundColor: Colors.transparent, 
+    side: const BorderSide(color: Colors.redAccent, width: 2), 
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12), 
+    ),
+  ),
+)
+
             ),
           ],
         ),
