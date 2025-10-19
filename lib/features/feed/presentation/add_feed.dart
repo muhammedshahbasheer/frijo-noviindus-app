@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:frijo_noviindus_app/features/feed/presentation/feed_controller.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-
+import 'package:image_picker/image_picker.dart';
+import 'feed_controller.dart'; // make sure path is correct
 
 class AddFeedScreen extends StatefulWidget {
   const AddFeedScreen({super.key});
@@ -15,20 +14,24 @@ class AddFeedScreen extends StatefulWidget {
 class _AddFeedScreenState extends State<AddFeedScreen> {
   final _descController = TextEditingController();
   final picker = ImagePicker();
-  List<int> selectedCategories = [];
+  List<int> selectedCategories = []; 
 
   Future<void> pickVideo(FeedController controller) async {
     final picked = await picker.pickVideo(source: ImageSource.gallery);
-    if (picked != null) {
-      controller.setVideo(File(picked.path));
-    }
+    if (picked != null) controller.setVideo(File(picked.path));
   }
 
   Future<void> pickImage(FeedController controller) async {
     final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      controller.setImage(File(picked.path));
-    }
+    if (picked != null) controller.setImage(File(picked.path));
+  }
+
+  bool allFieldsFilled(FeedController controller) {
+    return _descController.text.trim().isNotEmpty &&
+        controller.imageFile != null &&
+        controller.videoFile != null &&
+        selectedCategories.isNotEmpty &&
+        !controller.isUploading;
   }
 
   @override
@@ -46,6 +49,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Description
               TextField(
                 controller: _descController,
                 maxLines: 3,
@@ -60,8 +64,11 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+                onChanged: (_) => setState(() {}), // triggers rebuild for button
               ),
               const SizedBox(height: 16),
+
+              // Pick Image
               GestureDetector(
                 onTap: () => pickImage(controller),
                 child: Container(
@@ -80,11 +87,14 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                   child: controller.imageFile == null
                       ? const Center(
                           child: Text('Tap to pick thumbnail image',
-                              style: TextStyle(color: Colors.white54)))
+                              style: TextStyle(color: Colors.white54)),
+                        )
                       : null,
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Pick Video
               GestureDetector(
                 onTap: () => pickVideo(controller),
                 child: Container(
@@ -97,7 +107,8 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                   child: controller.videoFile == null
                       ? const Center(
                           child: Text('Tap to pick video (MP4 < 5 mins)',
-                              style: TextStyle(color: Colors.white54)))
+                              style: TextStyle(color: Colors.white54)),
+                        )
                       : Center(
                           child: Text(
                             'Video selected: ${controller.videoFile!.path.split('/').last}',
@@ -106,6 +117,32 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                           ),
                         ),
                 ),
+              ),
+              const SizedBox(height: 16),
+
+              // Categories selection example (adjust based on your app)
+              Wrap(
+                spacing: 8,
+                children: List.generate(5, (index) {
+                  final categoryId = 23 + index;
+                  final isSelected = selectedCategories.contains(categoryId);
+                  return ChoiceChip(
+                    label: Text('Category $categoryId',
+                        style: const TextStyle(color: Colors.white)),
+                    selected: isSelected,
+                    selectedColor: Colors.redAccent,
+                    backgroundColor: Colors.grey[800],
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          selectedCategories.add(categoryId);
+                        } else {
+                          selectedCategories.remove(categoryId);
+                        }
+                      });
+                    },
+                  );
+                }),
               ),
               const SizedBox(height: 24),
 
@@ -127,22 +164,25 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                   ],
                 ),
 
+              // Upload button
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
+                  backgroundColor: allFieldsFilled(controller)
+                      ? Colors.redAccent
+                      : Colors.grey,
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: controller.isUploading
-                    ? null
-                    : () {
+                onPressed: allFieldsFilled(controller)
+                    ? () {
                         controller.uploadFeed(
                           desc: _descController.text.trim(),
                           categories: selectedCategories,
                           context: context,
                         );
-                      },
+                      }
+                    : null,
                 child: const Text(
                   'Upload Feed',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
