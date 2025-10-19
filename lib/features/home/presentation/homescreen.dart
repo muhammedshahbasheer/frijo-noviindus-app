@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
@@ -85,7 +86,16 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F0F0F),
-        title: const Text('Feeds', style: TextStyle(color: Colors.white)),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Hello maria', style: GoogleFonts.montserrat(fontSize: 25, color: Colors.white)),
+            SizedBox(height: 2),
+            Text(
+              "welcome back to the session",
+              style: GoogleFonts.montserrat(fontSize: 10, color: Colors.white),
+            ),
+          ],
+        ),
         actions: [
           GestureDetector(
             onTap: () {
@@ -124,7 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Icon(Icons.add),
       ),
       body: controller.isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.redAccent),
+            )
           : RefreshIndicator(
               onRefresh: () async => controller.fetchFeeds(),
               child: ListView.builder(
@@ -134,7 +146,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   final isPlaying = _currentlyPlayingIndex == index;
 
                   return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[900],
                       borderRadius: BorderRadius.circular(12),
@@ -146,11 +161,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ListTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.grey[800],
-                            backgroundImage: (feed.userImage != null &&
+                            backgroundImage:
+                                (feed.userImage != null &&
                                     feed.userImage!.isNotEmpty)
                                 ? NetworkImage(feed.userImage!)
                                 : null,
-                            child: (feed.userImage == null ||
+                            child:
+                                (feed.userImage == null ||
                                     feed.userImage!.isEmpty)
                                 ? const Icon(Icons.person, color: Colors.white)
                                 : null,
@@ -158,7 +175,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           title: Text(
                             feed.username,
                             style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           subtitle: const Text(
                             "5 days ago",
@@ -183,17 +202,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Image.network(
                                           feed.image,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Container(
-                                            color: Colors.grey[800],
-                                            child: const Center(
-                                              child: Icon(Icons.broken_image,
-                                                  color: Colors.white54),
-                                            ),
-                                          ),
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
+                                                color: Colors.grey[800],
+                                                child: const Center(
+                                                  child: Icon(
+                                                    Icons.broken_image,
+                                                    color: Colors.white54,
+                                                  ),
+                                                ),
+                                              ),
                                         ),
                                         const Center(
-                                          child: Icon(Icons.play_circle_fill,
-                                              size: 60, color: Colors.white70),
+                                          child: Icon(
+                                            Icons.play_circle_fill,
+                                            size: 60,
+                                            color: Colors.white70,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -206,7 +231,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.all(12.0),
                           child: Text(
                             feed.description,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
