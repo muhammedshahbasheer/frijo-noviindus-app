@@ -79,7 +79,7 @@ class _MyFeedScreenState extends State<MyFeedScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
-        title: const Text('My Feeds'),
+        title: const Text('My Feeds',style: TextStyle(color: Colors.white),),
         backgroundColor: const Color(0xFF0F0F0F),
       ),
       body: controller.isLoading
